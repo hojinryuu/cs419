@@ -1,0 +1,9 @@
+{
+    "yogurt1": {
+        "username": "yogurt1",
+        "email": "yg2@gurtyo.com",
+        "password_hash": "$2b$12$EpTXBMetWfUos08izLPPneqlOWiZGGjKPc9/vt/otVEFizVQL3k8m",
+        "role": "User",
+        "failed_attempts": 0
+    }
+}

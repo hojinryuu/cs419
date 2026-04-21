@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets / local config
+.env
+secret.key
+
+# Logs (keep the folder, ignore contents)
+logs/*.log
+
+# OS/editor noise
+.DS_Store
