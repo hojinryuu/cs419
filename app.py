@@ -2,16 +2,21 @@ from flask import Flask
 from flask import render_template
 import json
 from pathlib import Path
-from flask import request, redirect, url_for, flash, session, abort
+from flask import request, redirect, url_for, flash, session, abort, send_file
 import re
 import config
 import bcrypt
 import logging
 import time
 from functools import wraps
+import io
+import os
+from cryptography.fernet import Fernet
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config.from_object(config.Config)
+cipher_suite = Fernet(app.config['ENCRYPTION_KEY'])
 
 logging.basicConfig(
     filename=config.Config.SECURITY_LOG, 
@@ -78,6 +83,12 @@ def require_role(*role_names):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+@app.before_request
+def check_session_timeout():
+    session.permanent = True 
+    if 'username' in session:
+        session.modified = True
 
 # app routes
 @app.route("/")
@@ -165,6 +176,8 @@ def login():
             session.clear()
             session['username'] = username
             session['role'] = user_data.get('role', 'User')
+
+            session.permanent = True
             
             logging.info(f"Successful login: User '{username}'")
             flash("Welcome back!", "success")
@@ -201,20 +214,107 @@ def logout():
 def dashboard():
     return render_template("dashboard.html", username=session['username'], role=session['role'])
 
-@app.route("/admin/dashboard")
+@app.route("/admin_dashboard")
 @require_role('Admin')
 def admin_dashboard():
-    return render_template("admin_dashboard.html")
+    users = load_users_from_file()
+    log_entries = []
+    log_path = app.config['SECURITY_LOG']
+    
+    if os.path.exists(log_path):
+        with open(log_path, 'r') as f:
+            log_entries = f.readlines()[-50:]
+            # reversed so newest events are at the top
+            log_entries.reverse()
 
-@app.route("/upload")
+    return render_template("admin_dashboard.html", users=users, logs=log_entries)
+
+@app.route("/upload", methods=['GET', 'POST'])
 @require_role('Admin', 'User')
 def upload_page():
+    if request.method == 'POST':
+        file = request.files.get('document')
+        if not file or file.filename == '':
+            flash("No file selected", "danger")
+            return redirect(request.url)
+        
+        filename = secure_filename(file.filename)
+        
+        file_data = file.read()
+        encrypted_data = cipher_suite.encrypt(file_data)
+
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.enc")
+        with open(upload_path, 'wb') as f:
+            f.write(encrypted_data)
+            
+        logging.info(f"FILE_UPLOAD: User '{session['username']}' uploaded '{filename}'")
+        flash("File uploaded successfully!", "success")
+        return redirect(url_for('dashboard'))
+
     return render_template("upload.html")
 
-@app.route("/view_files") # everybody allowed 
-@require_role('Admin', 'User', 'Guest') 
+@app.route("/view_files")
+@require_role('Admin', 'User', 'Guest') # everybody allowed 
 def view_files():
-       return render_template("view_files.html")
+    upload_path = app.config['UPLOAD_FOLDER']
+
+    if not os.path.exists(upload_path):
+        os.makedirs(upload_path)
+    files = [f for f in os.listdir(upload_path) if f.endswith('.enc')]
+
+    return render_template("view_files.html", files=files)
+
+@app.route("/download/<filename>")
+@require_role('Admin', 'User', 'Guest')
+def download_file(filename):
+    # secure_filename() cleans up filename 
+    safe_filename = secure_filename(filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    
+    if not os.path.exists(file_path):
+        logging.error(f"DOWNLOAD_FAIL: File {safe_filename} not found.")
+        abort(404)
+
+    try:
+        with open(file_path, 'rb') as f:
+            encrypted_data = f.read()
+
+        decrypted_data = cipher_suite.decrypt(encrypted_data)
+        original_name = safe_filename.replace('.enc', '')
+
+        logging.info(f"FILE_DOWNLOAD: User '{session.get('username')}'downloaded '{original_name}'")
+        
+        return send_file(
+            io.BytesIO(decrypted_data),
+            as_attachment=True,
+            download_name=original_name,
+            mimetype='application/octet-stream'
+        )
+
+    except Exception as e:
+        logging.error(f"DECRYPTION_FAIL: Error processing {safe_filename}: {str(e)}")
+        flash("Integrity check failed. File may be corrupted or key is invalid.", "danger")
+        return redirect(url_for('view_files'))
+    
+@app.after_request
+def set_security_headers(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'"
+    )
+    
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        
+    return response
 
 if __name__ == "__main__":
-    app.run(debug = True)
+    app.run(debug=True, ssl_context=('cert.pem', 'key.pem'))
