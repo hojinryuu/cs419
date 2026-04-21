@@ -14,3 +14,9 @@ class Config:
    
     SECRET_KEY = os.environ["SECRET_KEY"] # must exist; crash if missing
     BCRYPT_LOG_ROUNDS = 12
+
+    ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+    UPLOAD_FOLDER = BASE_DIR / "data" / "uploads"
+    
+    PERMANENT_SESSION_LIFETIME = 1800  # 30 min
+    SESSION_COOKIE_HTTPONLY = True 

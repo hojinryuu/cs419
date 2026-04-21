@@ -2,12 +2,13 @@ from flask import Flask
 from flask import render_template
 import json
 from pathlib import Path
-from flask import request, redirect, url_for, flash
+from flask import request, redirect, url_for, flash, session, abort
 import re
 import config
 import bcrypt
 import logging
 import time
+from functools import wraps
 
 app = Flask(__name__)
 app.config.from_object(config.Config)
@@ -57,6 +58,31 @@ def check_pw_requirements(password):
     allowed_special_characters = set("!@#$%^&*")
     has_special_character = any(c in allowed_special_characters for c in password)
     return has_upper and has_lower and has_digit and has_special_character
+
+def require_role(*role_names):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # check if they're logged in
+            if 'username' not in session:
+                logging.warning("Unauthorized access attempt: No active session.")
+                flash("Please log in to view this page", "danger")
+                return redirect(url_for('login'))
+            
+            # improper role action
+            user_role = session.get('role')
+            if user_role not in role_names:
+                logging.warning(f"Access Denied: User '{session['username']}' with role '{user_role}' tried to access a restricted area.")
+                abort(403)
+                
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# app routes
+@app.route("/")
+def home():
+    return render_template("login.html")
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -111,14 +137,84 @@ def signup():
         save_user_to_file(new_user)
         flash("Account created successfully!", "success")
         logging.info(f"Successful registration: User '{username}' created.")
-        return redirect(url_for('home')) 
+        return redirect(url_for('login')) 
     
     # on GET request
     return render_template("signup.html")
 
-@app.route("/")
-def home():
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        users = load_users_from_file()
+        user_data = users.get(username)
+
+        if user_data.get('locked_until'):
+            if time.time() < user_data['locked_until']:
+                logging.warning(f"Login denied: Account '{username}' is currently locked.")
+                flash("Account locked. Please try again later.", "danger")
+                return render_template("login.html")
+
+        if user_data and bcrypt.checkpw(password.encode('utf-8'), user_data['password_hash'].encode('utf-8')): # success case
+            user_data['failed_attempts'] = 0
+            user_data['locked_until'] = None
+            save_user_to_file(user_data)
+                
+            session.clear()
+            session['username'] = username
+            session['role'] = user_data.get('role', 'User')
+            
+            logging.info(f"Successful login: User '{username}'")
+            flash("Welcome back!", "success")
+            return redirect(url_for('dashboard'))
+            
+        else:
+            if user_data:
+                user_data['failed_attempts'] += 1
+                if user_data['failed_attempts'] >= 5:
+                    user_data['locked_until'] = time.time() + 900
+                    logging.warning(f"ACCOUNT_LOCKED: User '{username}' after 5 failed attempts.")
+                    flash("Too many failed attempts. Account locked for 15 minutes.", "danger")
+                else:
+                    logging.warning(f"Failed login attempt ({user_data['failed_attempts']}/5): User '{username}'")
+                    flash("Invalid username or password", "danger")
+                save_user_to_file(user_data)
+            else:
+                flash("Invalid username or password", "danger")
+            return render_template("login.html", username=username)
+
     return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    username = session.get('username')
+    session.clear()
+    logging.info(f"User '{username}' logged out.")
+    flash("You have been logged out", "success")
+    return redirect(url_for('login'))
+
+# rbac routes
+@app.route("/dashboard")
+@require_role('Admin', 'User')
+def dashboard():
+    return render_template("dashboard.html", username=session['username'], role=session['role'])
+
+@app.route("/admin/dashboard")
+@require_role('Admin')
+def admin_dashboard():
+    return render_template("admin_dashboard.html")
+
+@app.route("/upload")
+@require_role('Admin', 'User')
+def upload_page():
+    return render_template("upload.html")
+
+@app.route("/view_files") # everybody allowed 
+@require_role('Admin', 'User', 'Guest') 
+def view_files():
+       return render_template("view_files.html")
 
 if __name__ == "__main__":
     app.run(debug = True)

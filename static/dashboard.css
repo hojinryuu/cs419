@@ -1,0 +1,81 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+    transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.menu {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.menu ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.menu li {
+    margin-bottom: 12px;
+}
+
+.alert {
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.logout-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #dc3545;
+    color: white !important;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+    text-decoration: none;
+}
