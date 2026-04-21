@@ -82,7 +82,7 @@ def require_role(*role_names):
 # app routes
 @app.route("/")
 def home():
-    return render_template("login.html")
+    return redirect(url_for('login'))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
