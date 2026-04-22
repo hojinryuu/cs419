@@ -62,7 +62,10 @@ Admin   admin   AdminPass123!<br>
 User    user    UserPass123!<br>
 Guest   guest   GuestPass123!
 
-
+To generate PEM files, use the following command
+```
+openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
+```
 5. **Project Structure**
 
 
