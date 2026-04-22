@@ -1,11 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Secure-App</title>
+    <link rel="stylesheet" href="/static/admin_dashboard.css">
 </head>
+
 <body>
+    <div class="container admin-container">
+        <h2>Admin Dashboard</h2>
     
+        <h3>Registered Users</h3>
+        <table class="admin-table">
+            <thead>
+                <tr class="admin-table-header">
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for username, data in users.items() %}
+                <tr class="admin-table-row">
+                    <td>{{ username }}</td>
+                    <td>{{ data.email }}</td>
+                    <td><strong>{{ data.role }}</strong></td>
+                    <td>
+                        {% if data.locked_until and data.locked_until > time.time() %}
+                            <span class="status-locked">Locked</span>
+                        {% else %}
+                            <span class="status-active">Active</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    
+        <h3>Security Audit Trail</h3>
+        <div class="audit-trail-container">
+            {% for line in logs %}
+                <div class="audit-log-entry">
+                    {{ line }}
+                </div>
+            {% endfor %}
+            {% if not logs %}
+                <p class="no-logs">No security events recorded.</p>
+            {% endif %}
+        </div>
+    
+        <br>
+        <a href="{{ url_for('dashboard') }}">Back to Main Dashboard</a>
+    </div>
 </body>
 </html>

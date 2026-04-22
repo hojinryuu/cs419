@@ -1,11 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Secure-App</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
+    <div class="container">
+        <h2>Shared Documents</h2>    
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                    <th style="padding: 10px;">Filename</th>
+                    <th style="padding: 10px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;">{{ file.replace('.enc', '') }}</td>
+                    <td style="padding: 10px;">
+                        <a href="{{ url_for('download_file', filename=file) }}" style="color: #007bff;">
+                            Download
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not files %}
+                <tr>
+                    <td colspan="2" style="padding: 20px; text-align: center; color: #666;">
+                        No documents found.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    
+        <br>
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </div>
 </body>
 </html>

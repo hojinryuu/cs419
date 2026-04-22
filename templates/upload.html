@@ -1,11 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Secure-App</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
-    
+    <div class="container">
+        <h2>Upload Document</h2>        
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <div style="margin-bottom: 15px;">
+                <input type="file" name="document" required>
+            </div>
+            <button type="submit" class="logout-btn" style="background-color: #28a745;">
+                Upload
+            </button>
+        </form>
+        <br>
+        <a href="{{ url_for('dashboard') }}">Return to Dashboard</a>
+    </div>
 </body>
 </html>

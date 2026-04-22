@@ -1,0 +1,53 @@
+.admin-container {
+    max-width: 900px;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    background: #fff;
+}
+
+.admin-table-header {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    text-align: left;
+}
+
+.admin-table th, 
+.admin-table td {
+    padding: 10px;
+}
+
+.admin-table-row {
+    border-bottom: 1px solid #eee;
+}
+
+.status-locked {
+    color: red;
+}
+
+.status-active {
+    color: green;
+}
+
+.audit-trail-container {
+    background: #212529;
+    color: #00ff00;
+    padding: 15px;
+    font-family: monospace;
+    height: 300px;
+    overflow-y: scroll;
+    border-radius: 4px;
+}
+
+.audit-log-entry {
+    margin-bottom: 5px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 2px;
+}
+
+.no-logs {
+    color: #888;
+}
